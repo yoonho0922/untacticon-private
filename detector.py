@@ -19,7 +19,7 @@ class MyDetector:
     TOTAL = 0
 
     EYE_AR_THRESH = 0.3
-    SLEEP_CONSEC_FRAMES = 50
+    SLEEP_CONSEC_FRAMES = 100
 
     (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
     (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
@@ -31,7 +31,7 @@ class MyDetector:
         ear = (A + B) / (2.0 * C)
         return ear
 
-    def detect_sleep(self, shape, frame):
+    def detect_sleep(self, shape, frame, state, state_changed):
         leftEye = shape[self.lStart: self.lEnd]
         rightEye = shape[self.rStart:self.rEnd]
         leftEAR = self.get_ear(leftEye)
@@ -42,10 +42,6 @@ class MyDetector:
         leftEyeHull = cv2.convexHull(leftEye)
         rightEyeHull = cv2.convexHull(rightEye)
 
-        # 눈 윤곽 표시
-        cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
-        cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
-
         # 졸음 감지
         if ear < self.EYE_AR_THRESH:  # 눈을 감았을 때
             self.COUNTER += 1
@@ -53,17 +49,21 @@ class MyDetector:
             # 눈을 계속 감고 있는 경우 -> 졸음이라고 판단
             if self.COUNTER >= self.SLEEP_CONSEC_FRAMES:
                 self.STATE = "sleep!"
+                state = 3
+                state_changed.emit('{}'.format(state))
 
         else:  # 눈을 떴을 때
-            COUNTER = 0
-            self.TATE = "normal"
+            self.COUNTER = 0
+            self.STATE = "normal"
+            state = 1
+            state_changed.emit('{}'.format(state))
 
         cv2.putText(frame, "COUNTER: {}".format(self.COUNTER), (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(frame, "USER STATE: {}".format(self.STATE), (300, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-    def video(self):
+    def video(self, state, state_changed):
 
 
 
@@ -90,29 +90,19 @@ class MyDetector:
                 shape = predictor(gray, rect)
                 shape = face_utils.shape_to_np(shape)
 
-                self.detect_sleep(shape, frame)
+                self.detect_sleep(shape, frame, state, state_changed)
+
+
 
             cv2.imshow("webcam", frame)
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord("1"):
-                self.sec = 1
-                self.sec_changed.emit('{}'.format(self.sec))
+                state = 1
+                state_changed.emit('{}'.format(state))
             if key == ord("2"):
-                self.sec = 2
-                self.sec_changed.emit('{}'.format(self.sec))
-            if key == ord("3"):
-                self.sec = 3
-                self.sec_changed.emit('{}'.format(self.sec))
-            if key == ord("4"):
-                self.sec = 4
-                self.sec_changed.emit('{}'.format(self.sec))
-            if key == ord("5"):
-                self.sec = 5
-                self.sec_changed.emit('{}'.format(self.sec))
-            if key == ord("6"):
-                self.sec = 6
-                self.sec_changed.emit('{}'.format(self.sec))
+                sec = 2
+                state_changed.emit('{}'.format(state))
 
             if key == ord("q"):
                 break
