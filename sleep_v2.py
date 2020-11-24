@@ -10,16 +10,22 @@ import dlib
 import cv2
 
 def get_ear(eye):
+	# compute the euclidean distances between the two sets of
+	# vertical eye landmarks (x, y)-coordinates
 	A = dist.euclidean(eye[1], eye[5])
 	B = dist.euclidean(eye[2], eye[4])
+	# compute the euclidean distance between the horizontal
+	# eye landmark (x, y)-coordinates
 	C = dist.euclidean(eye[0], eye[3])
+	# compute the eye aspect ratio
 	ear = (A + B) / (2.0 * C)
+	# return the eye aspect ratio
 	return ear
 
 # 모델 불러오기
 print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor("public/shape_predictor_68_face_landmarks.dat")
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # video stream 시작
 print("[INFO] camera sensor warming up...")
@@ -29,11 +35,14 @@ time.sleep(2.0)
 # blink 관련
 
 STATE = "normal"
-COUNTER = 0
+CLOSE_CNT = 0
+BLINK_CNT = 0
+SLEEP_CNT = 0
 TOTAL = 0
 
 EYE_AR_THRESH = 0.3
-EYE_AR_CONSEC_FRAMES = 100
+EYE_AR_CONSEC_FRAMES = 3
+SLEEP_FRAMES = 200
 
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
 (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
@@ -67,18 +76,20 @@ while True:
         cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
 
         #졸음 감지
+
         if ear < EYE_AR_THRESH: # 눈을 감았을 때
-            COUNTER += 1
+            CLOSE_CNT += 1
+            SLEEP_CNT += 1
 
             # 눈을 계속 감고 있는 경우 -> 졸음이라고 판단
-            if COUNTER >= EYE_AR_CONSEC_FRAMES:
+            if SLEEP_CNT >= SLEEP_FRAMES:
                 STATE = "sleep!"
 
         else:   # 눈을 떴을 때
-            COUNTER = 0
-            STATE = "normal"
+            CLOSE_CNT = 0
 
-        cv2.putText(frame, "COUNTER: {}".format(COUNTER), (10, 30),
+
+        cv2.putText(frame, "COUNTER: {}".format(SLEEP_CNT), (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         cv2.putText(frame, "USER STATE: {}".format(STATE), (300, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)

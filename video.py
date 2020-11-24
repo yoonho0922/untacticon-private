@@ -6,10 +6,12 @@ import dlib
 import cv2
 
 # 모델 불러오기
+print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # video stream 시작
+print("[INFO] camera sensor warming up...")
 vs = VideoStream(0).start()
 time.sleep(2.0)
 
@@ -32,6 +34,7 @@ while True:
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
+
         break
 
 # 종료
